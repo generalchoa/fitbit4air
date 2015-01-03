@@ -1,4 +1,1 @@
-fitbit4air
-==========
-
-Standalone Adobe AIR application to hook into Fitbit API
+# Fitbit AS3 API Client Library
