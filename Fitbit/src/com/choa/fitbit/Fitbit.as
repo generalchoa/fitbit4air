@@ -1,16 +1,20 @@
-package bryantchoa 
+package com.choa.fitbit 
 {
+	import com.choa.fitbit.events.FitbitOAuthEvent;
+	import com.choa.fitbit.events.FitbitUiEvent;
+	import com.choa.fitbit.helper.HttpUtility;
 	import flash.events.Event;
 	import flash.events.EventDispatcher;
 	import flash.events.IOErrorEvent;
 	import flash.net.URLLoader;
 	import flash.net.URLRequest;
 	import flash.net.URLRequestHeader;
+	import flash.utils.Dictionary;
 	import org.iotashan.oauth.OAuthConsumer;
 	import org.iotashan.oauth.OAuthRequest;
 	import org.iotashan.oauth.OAuthSignatureMethod_HMAC_SHA1;
 	import org.iotashan.oauth.OAuthToken;
-	
+
 	/**
 	 * ...
 	 * @author Michael Choa
@@ -28,6 +32,11 @@ package bryantchoa
 		
 		private var _consumer:OAuthConsumer;
 		
+		private var _tempAccessToken:String;
+		private var _tempAccessTokenSecret:String;
+		private var _permanentAccessToken:String;
+		private var _permanentAccessTokenSecret:String;
+		
 		public function set consumerKey( key : String ) : void {
 			_consumerKey = key;
 		}
@@ -41,6 +50,10 @@ package bryantchoa
 				_consumer = new OAuthConsumer( _consumerKey, _consumerSecret );
 			}
 			return _consumer;
+		}
+		
+		public function get tempAccessToken():String {
+			return _tempAccessToken;
 		}
 		
 		public function Fitbit(consumerKey:String, consumerSecret:String) {
@@ -58,20 +71,44 @@ package bryantchoa
 			request.method = "POST";
 			var loader:URLLoader = new URLLoader();
 			loader.addEventListener( Event.COMPLETE, requestTokenHandler );
-			loader.addEventListener( IOErrorEvent.IO_ERROR, requestTokenErrorHandler );
+			loader.addEventListener( IOErrorEvent.IO_ERROR, tokenErrorHandler );
 			loader.load(request);
 		}
 			
 		private function requestTokenHandler(e:Event):void {
-			trace("Success!");
-			trace("Data:\t" + (e.currentTarget as URLLoader).data)
+			var tempOAuthTokens:Dictionary = HttpUtility.parseQueryString( (e.currentTarget as URLLoader).data as String);
+			_tempAccessToken = tempOAuthTokens["oauth_token"];
+			_tempAccessTokenSecret = tempOAuthTokens["oauth_token_secret"];
+			dispatchEvent(new FitbitOAuthEvent(FitbitOAuthEvent.REQUEST_TOKEN));
 		}
 		
-		private function requestTokenErrorHandler(e:IOErrorEvent):void 	{
-			trace("Failure!");
+		public function obtainAccessToken(pin:String):void 	{
+			if (pin == null || pin == "") {
+				dispatchEvent(new FitbitOAuthEvent(FitbitOAuthEvent.PIN_ERROR));
+				return;
+			}
+			var oauthRequest:OAuthRequest = new OAuthRequest( "POST", ACCESS_TOKEN, { "oauth_verifier" : pin }, consumer, new OAuthToken( _tempAccessToken, _tempAccessTokenSecret ) );
+			var request:URLRequest = new URLRequest(ACCESS_TOKEN);
+			var requestHeader:URLRequestHeader = oauthRequest.buildRequest( signature, OAuthRequest.RESULT_TYPE_HEADER );
+			var headers:Array = [];
+			headers.push(requestHeader);
+			request.requestHeaders = headers;
+			request.method = "POST";
+			var loader:URLLoader = new URLLoader();
+			loader.addEventListener( Event.COMPLETE, accessTokenHandler );
+			loader.addEventListener( IOErrorEvent.IO_ERROR, tokenErrorHandler );
+			loader.load(request);
 		}
 		
-		public function obtainAccessToken(pin:uint):void 	{
+		private function accessTokenHandler(e:Event):void 
+		{
+			var permanentAccessTokens:Dictionary = HttpUtility.parseQueryString( (e.currentTarget as URLLoader).data as String );
+			_permanentAccessToken = permanentAccessTokens["oauth_token"];
+			_permanentAccessTokenSecret = permanentAccessTokens["oauth_token_secret"];
+		}
+		
+		private function tokenErrorHandler(e:IOErrorEvent):void 
+		{
 			
 		}
 		

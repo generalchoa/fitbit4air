@@ -1,4 +1,4 @@
-package bryantchoa 
+package com.choa.fitbit 
 {
 	import org.iotashan.oauth.OAuthToken;
 	
@@ -42,7 +42,7 @@ package bryantchoa
 		 * If the PIN matches an OAuth AccessToken will the requested from the Twitter API
 		 * and finally the TwitterOAuthEvent.ACCESS_TOKEN event will be fired.
 		 */
-		function obtainAccessToken( pin : uint ) : void;
+		function obtainAccessToken( pin : String ) : void;
 		
 		/**
 		 * If the user is already authenticated you can verify if the AccessToken is still valid.
